@@ -723,13 +723,25 @@
   <main class="content">
     <div class="upload-container">
       <div class="upload-header">
-        <h1>图片上传工具</h1>
-        <p>上传图片并获取Markdown引用代码</p>
+        <h1>文件上传工具</h1>
+        <p>上传文件并获取Markdown引用代码</p>
       </div>
       
       <div class="upload-form">
-        <input type="file" id="file-input" class="file-input">
-        <button id="upload-btn" class="upload-btn">上传图片</button>
+        <!-- 修改后的移动端友好文件选择区域 -->
+        <input type="file" id="file-input" class="file-input" style="display:none" accept=".doc,.docx,.xls,.xlsx,.pdf,.png,.jpg,.jpeg, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/pdf, image/png, image/jpeg">
+        <p style="font-size: 14px; color: #666; margin-top: 5px;">
+          支持格式: DOC, DOCX, XLS, XLSX, PDF, PNG, JPE
+        </p>
+        
+        <button onclick="document.getElementById('file-input').click()" class="upload-btn">
+          选择图片
+        </button>
+  
+        <button id="upload-btn" class="upload-btn">上传文件</button>
+  
+        <!-- 可选：添加文件信息显示 -->
+        <div id="file-info" style="margin-top: 10px; font-size: 14px"></div>
       </div>
       
       <div id="upload-result" class="upload-result">
@@ -918,21 +930,40 @@
     // 上传图片
     uploadBtn.addEventListener('click', async () => {
       if (!fileInput.files.length) {
-        alert('请选择要上传的图片');
+        alert('请选择要上传的文件');
         return;
       }
       
       const file = fileInput.files[0];
       
       // 验证文件类型
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-      if (!allowedTypes.includes(file.type)) {
-        alert('只支持JPG、PNG或GIF格式的图片');
+      const allowedTypes = [
+        // 文档类型
+        'application/msword', // .doc
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+        'application/vnd.ms-excel', // .xls
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/pdf', // .pdf
+  
+        // 图片类型
+        'image/png', // .png
+        'image/jpeg', 'image/jpg' // .jpg, .jpeg
+      ];
+
+      // 添加文件扩展名检查（因为某些浏览器可能不会正确报告MIME类型）
+      const allowedExtensions = ['.doc', '.docx', '.xls', '.xlsx', '.pdf', '.png', '.jpe', '.jpg', '.jpeg'];
+      const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
+      if (
+        !allowedTypes.includes(file.type) && 
+        !allowedExtensions.includes(fileExtension)
+      ) {
+        alert('只支持以下文件类型：\nDOC, DOCX, XLS, XLSX, PDF, PNG, JPE');
         return;
       }
       
       // 验证文件大小 (10MB)
-      const maxSize = 10 * 1024 * 1024;
+      const maxSize = 50 * 1024 * 1024;
       if (file.size > maxSize) {
         alert(`文件大小不能超过 ${maxSize / 1024 / 1024}MB`);
         return;
@@ -944,6 +975,19 @@
         
         const formData = new FormData();
         formData.append('file', file);
+
+        // ===== 新增超时控制 =====
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000); // 30秒超时
+
+        const response = await fetch('http://localhost:3000/upload', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal  // 添加AbortController信号
+        });
+        
+        clearTimeout(timeout);  // 清除超时计时器
+        // ===== 结束新增 =====
         
         const response = await fetch('http://localhost:3000/upload', {
           method: 'POST',
@@ -959,7 +1003,7 @@
         
         if (result && result.success === true) {
           // 生成Markdown代码
-          const mdCode = `![${file.name.replace(/\.[^/.]+$/, '')}](${result.path})`;
+          const mdCode = `[${file.name}](${result.path})`;
           mdCodePre.textContent = mdCode;
           resultDiv.style.display = 'block';
           
@@ -988,15 +1032,16 @@
           throw new Error(result.error || '上传失败');
         }
       } catch (error) {
-        console.error('上传错误:', error);
-        alert(`错误: ${error.message}`);
-
-        // 显示服务器返回的原始响应（如果可用）
-        if (error.responseText) {
-          console.log('服务器原始响应:', error.responseText);
+        // ===== 修改错误处理 =====
+        if (error.name === 'AbortError') {
+          alert('上传超时，请重试！');
+        } else {
+          console.error('上传错误:', error);
+          alert(`错误: ${error.message}`);
         }
+        // ===== 结束修改 =====
       } finally {
-        uploadBtn.textContent = '上传图片';
+        uploadBtn.textContent = '上传文件';
         uploadBtn.disabled = false;
       }
     });
