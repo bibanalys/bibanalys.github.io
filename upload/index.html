@@ -952,12 +952,12 @@
         
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`上传失败: ${errorText}`);
+          throw new Error(`HTTP错误 ${response.status}: ${errorText}`);
         }
         
         const result = await response.json();
         
-        if (result.success) {
+        if (result && result.success === true) {
           // 生成Markdown代码
           const mdCode = `![${file.name.replace(/\.[^/.]+$/, '')}](${result.path})`;
           mdCodePre.textContent = mdCode;
@@ -990,6 +990,11 @@
       } catch (error) {
         console.error('上传错误:', error);
         alert(`错误: ${error.message}`);
+
+        // 显示服务器返回的原始响应（如果可用）
+        if (error.responseText) {
+          console.log('服务器原始响应:', error.responseText);
+        }
       } finally {
         uploadBtn.textContent = '上传图片';
         uploadBtn.disabled = false;
