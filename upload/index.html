@@ -1116,7 +1116,7 @@
 
         // 使用XMLHttpRequest以支持进度跟踪
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', 'https://your-api-domain.com/upload');
+        xhr.open('POST', 'http://localhost:3000/upload');
         
         // 上传进度跟踪
         xhr.upload.addEventListener('progress', (event) => {
