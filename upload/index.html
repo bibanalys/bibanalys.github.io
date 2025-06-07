@@ -419,7 +419,7 @@
         content-visibility: auto;
       }
       .file-drop-area {
-        @apply border-2 border-dashed border-primary rounded-lg p-6 text-center cursor-pointer transition-all duration-300 hover:border-primary/70;
+        @apply border-2 border-dashed border-primary rounded-lg p-6 text-center cursor-pointer transition-all duration-300 hover:border-primary/70 hover:bg-primary/5;
       }
       .file-info-card {
         @apply bg-neutral-100 rounded-lg p-4 text-sm mb-4;
@@ -799,7 +799,7 @@
         <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
           <i class="fa fa-history text-primary mr-2"></i>最近上传
         </h3>
-        <div id="history-list"></div>
+        <div id="history-list" class="bg-neutral-100 rounded-xl p-5 border border-neutral-200"></div>
       </div>
     </div>
   </main>
@@ -973,61 +973,63 @@
       uploadBtn.disabled = false;
     });
     
-    // 加载上传历史
+    // 加载最近一条上传历史
     function loadUploadHistory() {
       const history = JSON.parse(localStorage.getItem('uploadHistory') || '[]');
       historyList.innerHTML = '';
       
       if (history.length === 0) {
-        historyList.innerHTML = '<p class="text-gray-500 italic">暂无上传历史</p>';
+        historyList.innerHTML = `
+          <div class="text-center py-8">
+            <i class="fa fa-file-o text-4xl text-neutral-300 mb-3"></i>
+            <p class="text-gray-500 italic">暂无上传历史</p>
+          </div>
+        `;
         return;
       }
       
-      history.forEach(item => {
-        const itemEl = document.createElement('div');
-        itemEl.className = 'history-item';
-        
-        // 获取文件扩展名
-        const fileExtension = item.name.split('.').pop().toLowerCase();
-        const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'].includes(fileExtension);
-        
-        // 根据文件类型生成不同的历史记录项
-        itemEl.innerHTML = `
-          <div class="file-icon">
+      const latestItem = history[0];
+      const fileExtension = latestItem.name.split('.').pop().toLowerCase();
+      const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'].includes(fileExtension);
+      
+      historyList.innerHTML = `
+        <div class="history-item flex flex-col sm:flex-row">
+          <div class="file-icon mx-auto sm:mx-0 mb-4 sm:mb-0">
             ${isImage ? 
-              `<img src="${item.path}" alt="${item.name}" class="max-w-full max-h-full object-contain" loading="lazy">` : 
+              `<img src="${latestItem.path}" alt="${latestItem.name}" class="max-w-full max-h-full object-contain" loading="lazy">` : 
               `<i class="fa fa-file-o text-2xl text-gray-500"></i>`
             }
           </div>
-          <div class="flex-1">
-            <p class="font-medium text-gray-800 truncate">${item.name}</p>
-            <pre class="bg-gray-800 text-white p-2 rounded mt-2 text-xs overflow-x-auto">${item.markdown}</pre>
-            <button class="btn btn-secondary text-sm mt-3 px-4 py-2" data-code="${item.markdown}">
+          <div class="flex-1 w-full">
+            <div class="flex justify-between items-start mb-2">
+              <h4 class="font-medium text-gray-800">${latestItem.name}</h4>
+              <span class="text-xs text-gray-500">
+                ${new Date(latestItem.date).toLocaleString()}
+              </span>
+            </div>
+            <pre class="bg-gray-800 text-white p-3 rounded-lg mt-2 text-xs overflow-x-auto w-full">${latestItem.markdown}</pre>
+            <button id="history-copy-btn" class="btn btn-secondary text-sm mt-3 w-full sm:w-auto" data-code="${latestItem.markdown}">
               <i class="fa fa-clipboard mr-1"></i>复制代码
             </button>
           </div>
-        `;
-        
-        historyList.appendChild(itemEl);
-      });
+        </div>
+      `;
       
-      // 添加历史项的复制功能
-      document.querySelectorAll('.history-item .btn-secondary').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const code = btn.getAttribute('data-code');
-          navigator.clipboard.writeText(code);
-          
-          // 显示复制成功动画
-          btn.innerHTML = '<i class="fa fa-check mr-1"></i>已复制!';
-          btn.classList.remove('btn-secondary');
-          btn.classList.add('bg-green-600');
-          
-          setTimeout(() => {
-            btn.innerHTML = '<i class="fa fa-clipboard mr-1"></i>复制代码';
-            btn.classList.remove('bg-green-600');
-            btn.classList.add('btn-secondary');
-          }, 2000);
-        });
+      // 添加复制功能
+      document.getElementById('history-copy-btn').addEventListener('click', function() {
+        const code = this.getAttribute('data-code');
+        navigator.clipboard.writeText(code);
+        
+        // 显示复制成功动画
+        this.innerHTML = '<i class="fa fa-check mr-1"></i>已复制!';
+        this.classList.remove('btn-secondary');
+        this.classList.add('bg-green-600');
+        
+        setTimeout(() => {
+          this.innerHTML = '<i class="fa fa-clipboard mr-1"></i>复制代码';
+          this.classList.remove('bg-green-600');
+          this.classList.add('btn-secondary');
+        }, 2000);
       });
     }
     
@@ -1208,6 +1210,12 @@
         // 只保留最近10条
         localStorage.setItem('uploadHistory', JSON.stringify(history.slice(0, 10)));
         loadUploadHistory();
+        
+        // 添加上传成功动画
+        historyList.classList.add('animate-pulse');
+        setTimeout(() => {
+          historyList.classList.remove('animate-pulse');
+        }, 1000);
       } else {
         throw new Error(result.error || '上传失败');
       }
