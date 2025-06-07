@@ -782,7 +782,7 @@
                    window.location.hostname === '127.0.0.1';
       
       // 移动设备无法访问localhost，需要替换为实际IP或公网域名
-      return isDev ? '192.168.124.17:3000/upload' : 
+      return isDev ? 'http://192.168.1.100:3000/upload' : 
                     'https://bibanalys.github.io/upload';
     }
     
