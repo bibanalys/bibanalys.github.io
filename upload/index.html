@@ -1184,7 +1184,7 @@
         });
         
         // 只保留最近10条
-        localStorage.setItem('uploadHistory', JSON.stringify(history.slice(0, 10)));
+        localStorage.setItem('uploadHistory', JSON.stringify(history.slice(0, 1)));
         loadUploadHistory();
       } else {
         throw new Error(result.error || '上传失败');
