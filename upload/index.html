@@ -406,10 +406,6 @@
       margin-bottom: 30px;
     }
     
-    .file-input {
-      margin-bottom: 20px;
-    }
-    
     .upload-btn {
       background: #3498db;
       color: white;
@@ -519,6 +515,15 @@
       z-index: 1000;
     }
     
+    .debug-info {
+      padding: 10px;
+      background: #f1f1f1;
+      border-radius: 5px;
+      margin-top: 15px;
+      font-size: 12px;
+      display: none;
+    }
+    
     /* 移动端优化 */
     @media (max-width: 768px) {
       .upload-container {
@@ -535,7 +540,6 @@
         padding: 20px;
       }
       
-      /* 强制输入框字体大小 */
       input, button {
         font-size: 16px !important;
       }
@@ -867,6 +871,9 @@
         </div>
   
         <button id="upload-btn" class="upload-btn" disabled>上传文件</button>
+        
+        <!-- 新增：调试信息 -->
+        <div id="debug-info" class="debug-info"></div>
       </div>
       
       <div id="upload-result" class="upload-result">
@@ -1029,18 +1036,69 @@
     const progressBar = document.getElementById('progress-bar');
     const progressText = document.getElementById('progress-text');
     const networkStatus = document.getElementById('network-status');
+    const debugInfo = document.getElementById('debug-info');
     
-    // ================= 关键优化点1：动态API地址 =================
+    // ================= 关键优化1：智能API地址检测 =================
     function getApiUrl() {
       // 开发环境用本地IP，生产环境用实际域名
-      if (window.location.hostname === 'localhost' || 
-          window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:3000/upload'; // 替换为你的本地IP
+      const hostname = window.location.hostname;
+      
+      // 调试信息显示
+      debugInfo.innerHTML = `当前主机: ${hostname}<br>`;
+      
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // 获取本机IP地址（移动端可访问）
+        const localIP = getLocalIP() || '192.168.1.100'; // 默认值
+        const apiUrl = `http://${localIP}:3000/upload`;
+        debugInfo.innerHTML += `使用本地API: ${apiUrl}<br>`;
+        return apiUrl;
       }
-      return 'https://bibanalys.github.io/upload'; // 生产环境地址
+      
+      // 生产环境使用HTTPS
+      const prodUrl = 'https://api.yourdomain.com/upload';
+      debugInfo.innerHTML += `使用生产API: ${prodUrl}<br>`;
+      return prodUrl;
     }
     
-    // ================= 关键优化点2：网络状态检测 =================
+    // 获取本机IP地址（用于移动端访问）
+    function getLocalIP() {
+      return new Promise((resolve) => {
+        // 尝试通过WebRTC获取本地IP
+        window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+        
+        if (!window.RTCPeerConnection) {
+          debugInfo.innerHTML += 'WebRTC不可用，使用默认IP<br>';
+          resolve(null);
+          return;
+        }
+        
+        const pc = new RTCPeerConnection({ iceServers: [] });
+        const noop = () => {};
+        const ipRegex = /([0-9]{1,3}(\.[0-9]{1,3}){3})/;
+        
+        pc.createDataChannel('');
+        pc.createOffer().then((sdp) => pc.setLocalDescription(sdp, noop, noop));
+        
+        pc.onicecandidate = (ice) => {
+          if (!ice || !ice.candidate || !ice.candidate.candidate) {
+            debugInfo.innerHTML += '无法通过WebRTC获取IP<br>';
+            resolve(null);
+            return;
+          }
+          
+          const match = ipRegex.exec(ice.candidate.candidate);
+          if (match) {
+            debugInfo.innerHTML += `通过WebRTC获取到IP: ${match[1]}<br>`;
+            resolve(match[1]);
+          } else {
+            debugInfo.innerHTML += '无法解析WebRTC候选IP<br>';
+            resolve(null);
+          }
+        };
+      });
+    }
+    
+    // ================= 关键优化2：网络状态检测 =================
     function updateNetworkStatus() {
       const isOnline = navigator.onLine;
       networkStatus.textContent = isOnline ? '在线' : '离线';
@@ -1053,8 +1111,29 @@
     // 监听网络状态变化
     window.addEventListener('online', updateNetworkStatus);
     window.addEventListener('offline', updateNetworkStatus);
-    updateNetworkStatus(); // 初始状态
+    updateNetworkStatus();
     
+    // 显示调试信息（长按上传按钮3秒）
+    uploadBtn.addEventListener('mousedown', function() {
+      this.debugTimer = setTimeout(() => {
+        debugInfo.style.display = 'block';
+      }, 3000);
+    });
+    
+    uploadBtn.addEventListener('mouseup', function() {
+      clearTimeout(this.debugTimer);
+    });
+    
+    uploadBtn.addEventListener('touchstart', function() {
+      this.debugTimer = setTimeout(() => {
+        debugInfo.style.display = 'block';
+      }, 3000);
+    });
+    
+    uploadBtn.addEventListener('touchend', function() {
+      clearTimeout(this.debugTimer);
+    });
+
     // 文件选择处理
     fileInput.addEventListener('change', function(event) {
       const file = event.target.files[0];
@@ -1127,7 +1206,7 @@
       });
     }
     
-    // ================= 关键优化点3：改进的上传函数 =================
+    // ================= 关键优化3：改进的上传函数 =================
     uploadBtn.addEventListener('click', async () => {
       if (!fileInput.files.length) {
         alert('请选择要上传的文件');
@@ -1183,73 +1262,38 @@
         const formData = new FormData();
         formData.append('file', file, safeFileName);
 
-        // 使用XMLHttpRequest以支持进度跟踪
-        const xhr = new XMLHttpRequest();
-        const apiUrl = getApiUrl();
+        // 获取API地址
+        const apiUrl = await getApiUrl();
+        debugInfo.innerHTML += `开始上传到: ${apiUrl}<br>`;
         
-        xhr.open('POST', apiUrl);
-        xhr.timeout = 60000; // 60秒超时
+        // 使用Fetch API替代XMLHttpRequest（更好的错误处理）
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000); // 60秒超时
         
-        // 强制设置请求头（某些移动浏览器需要）
-        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        // 创建请求
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal
+        });
         
-        // ================= 关键优化点4：改进的进度处理 =================
-        let lastUpdate = 0;
-        xhr.upload.onprogress = function(e) {
-          if (e.lengthComputable) {
-            const now = Date.now();
-            // 节流更新（移动端性能优化）
-            if (now - lastUpdate > 100 || e.loaded === e.total) {
-              const percent = Math.round((e.loaded / e.total) * 100);
-              progressBar.style.width = `${percent}%`;
-              progressText.textContent = `${percent}%`;
-              lastUpdate = now;
-              
-              // 强制渲染更新（解决移动端卡顿）
-              progressBar.style.transform = 'translateZ(0)';
-            }
-          }
-        };
-
-        xhr.onload = function() {
-          if (xhr.status === 0) {
-            // 处理移动端网络中断情况
-            handleUploadError('网络连接已中断');
-            return;
-          }
-          
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const result = JSON.parse(xhr.responseText);
-              if (result.success) {
-                handleUploadSuccess(file, result);
-              } else {
-                handleUploadError(result.error || '上传失败');
-              }
-            } catch (e) {
-              handleUploadError('解析响应数据失败');
-            }
-          } else {
-            handleUploadError(`上传失败: ${xhr.statusText || '未知错误'}`);
-          }
-        };
-
-        xhr.onerror = function() {
-          handleUploadError(navigator.onLine ? '服务器连接失败' : '网络不可用');
-        };
-
-        xhr.ontimeout = function() {
-          handleUploadError('请求超时，请重试');
-        };
-
-        xhr.send(formData);
+        clearTimeout(timeout);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`服务器错误 ${response.status}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        handleUploadSuccess(file, result);
         
       } catch (error) {
-        handleUploadError(`错误: ${error.message}`);
+        handleUploadError(`上传失败: ${error.message}`);
+        debugInfo.innerHTML += `错误详情: ${error.message}<br>`;
       }
     });
     
-    // ================= 关键优化点5：统一错误处理 =================
+    // ================= 关键优化4：统一错误处理 =================
     function handleUploadError(message) {
       console.error('上传错误:', message);
       alert(message);
@@ -1298,6 +1342,8 @@
         // 只保留最近10条
         localStorage.setItem('uploadHistory', JSON.stringify(history.slice(0, 10)));
         loadUploadHistory();
+        
+        debugInfo.innerHTML += '上传成功！<br>';
       } else {
         handleUploadError(result.error || '上传失败');
       }
