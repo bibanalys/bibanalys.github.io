@@ -397,23 +397,149 @@
       box-shadow: 0 5px 25px rgba(0,0,0,0.1);
     }
     
-    /* 新增：部署兼容性样式 */
-    .deploy-status {
-      padding: 10px;
-      margin: 15px 0;
+    .upload-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .upload-form {
+      margin-bottom: 30px;
+    }
+    
+    .file-input {
+      margin-bottom: 20px;
+    }
+    
+    .upload-btn {
+      background: #3498db;
+      color: white;
+      padding: 12px 25px;
+      border: none;
       border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.3s;
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+    }
+    
+    .upload-btn:hover {
+      background: #2980b9;
+    }
+    
+    .upload-btn:disabled {
+      background: #95a5a6;
+      cursor: not-allowed;
+    }
+    
+    .upload-result {
       display: none;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #eee;
     }
-    .deploy-success {
-      background: #d4edda;
-      color: #155724;
+    
+    .copy-btn {
+      background: #2ecc71;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 15px;
     }
-    .deploy-error {
-      background: #f8d7da;
-      color: #721c24;
+    
+    .progress-container {
+      display: none;
+      width: 100%;
+      background: #e0e0e0;
+      border-radius: 4px;
+      margin: 15px 0;
+      position: relative;
     }
-
-    /* 其他原有样式保持不变... */
+    
+    .progress-bar {
+      height: 20px;
+      background: #3498db;
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    
+    .progress-text {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      line-height: 20px;
+      color: white;
+      font-size: 12px;
+    }
+    
+    .file-info-card {
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 5px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    
+    .history-item {
+      display: flex;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 5px;
+    }
+    
+    .file-icon {
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 15px;
+      background: #e0e0e0;
+      border-radius: 5px;
+    }
+    
+    /* 新增：网络状态指示器 */
+    .network-status {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      padding: 5px 10px;
+      background: #2ecc71;
+      color: white;
+      border-radius: 3px;
+      font-size: 12px;
+      z-index: 1000;
+    }
+    
+    /* 移动端优化 */
+    @media (max-width: 768px) {
+      .upload-container {
+        margin: 20px 15px;
+        padding: 20px;
+      }
+      
+      .upload-btn {
+        padding: 15px;
+        font-size: 18px;
+      }
+      
+      .file-input-label {
+        padding: 20px;
+      }
+      
+      /* 强制输入框字体大小 */
+      input, button {
+        font-size: 16px !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -692,12 +818,67 @@
 </header>
 
 
+  <!-- 新增：网络状态指示器 -->
+  <div id="network-status" class="network-status">在线</div>
+
   <main class="content">
     <div class="upload-container">
-      <!-- 原有上传界面保持不变... -->
+      <div class="upload-header">
+        <h1>文件上传工具</h1>
+        <p>上传文件并获取Markdown引用代码</p>
+      </div>
       
-      <!-- 新增：部署状态显示 -->
-      <div id="deploy-status" class="deploy-status"></div>
+      <div class="upload-form">
+        <!-- 改进的文件选择区域 -->
+        <label for="file-input" class="file-input-label" style="
+          display: block;
+          padding: 15px;
+          border: 2px dashed #3498db;
+          border-radius: 8px;
+          text-align: center;
+          cursor: pointer;
+          margin-bottom: 15px;
+        ">
+          <strong>点击选择文件</strong>
+          <p style="font-size: 14px; color: #666; margin-top: 10px;">
+            支持格式: DOC, DOCX, XLS, XLSX, PDF, PNG, JPG, JPEG, GIF, BMP
+          </p>
+        </label>
+        
+        <input 
+          type="file" 
+          id="file-input" 
+          class="file-input" 
+          style="display:none" 
+          accept=".doc,.docx,.xls,.xlsx,.pdf,.png,.jpg,.jpeg,.gif,.bmp"
+        >
+  
+        <!-- 文件信息显示 -->
+        <div id="file-info" class="file-info-card" style="display:none">
+          <div><strong>文件名:</strong> <span id="file-name"></span></div>
+          <div><strong>文件类型:</strong> <span id="file-type"></span></div>
+          <div><strong>文件大小:</strong> <span id="file-size"></span></div>
+        </div>
+        
+        <!-- 上传进度条 -->
+        <div id="progress-container" class="progress-container">
+          <div id="progress-bar" class="progress-bar"></div>
+          <span id="progress-text" class="progress-text">0%</span>
+        </div>
+  
+        <button id="upload-btn" class="upload-btn" disabled>上传文件</button>
+      </div>
+      
+      <div id="upload-result" class="upload-result">
+        <p>上传成功！复制以下代码到文章：</p>
+        <pre id="md-code"></pre>
+        <button id="copy-btn" class="copy-btn">复制代码</button>
+      </div>
+      
+      <div id="upload-history" class="upload-history">
+        <h3>最近上传</h3>
+        <div id="history-list"></div>
+      </div>
     </div>
   </main>
 
@@ -834,95 +1015,303 @@
   
   <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // 获取新增的部署状态元素
-    const deployStatus = document.getElementById('deploy-status');
-
-    // 改进的部署函数（关键修复1）
-    async function deployToGit() {
-      deployStatus.style.display = 'block';
-      deployStatus.className = 'deploy-status';
-      deployStatus.textContent = '正在部署到GitHub...';
-
-      try {
-        const response = await fetch('/api/deploy', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
+    const fileInput = document.getElementById('file-input');
+    const uploadBtn = document.getElementById('upload-btn');
+    const resultDiv = document.getElementById('upload-result');
+    const mdCodePre = document.getElementById('md-code');
+    const copyBtn = document.getElementById('copy-btn');
+    const historyList = document.getElementById('history-list');
+    const fileInfo = document.getElementById('file-info');
+    const fileName = document.getElementById('file-name');
+    const fileType = document.getElementById('file-type');
+    const fileSize = document.getElementById('file-size');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const networkStatus = document.getElementById('network-status');
+    
+    // ================= 关键优化点1：动态API地址 =================
+    function getApiUrl() {
+      // 开发环境用本地IP，生产环境用实际域名
+      if (window.location.hostname === 'localhost' || 
+          window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:3000/upload'; // 替换为你的本地IP
+      }
+      return 'https://bibanalys.github.io/upload'; // 生产环境地址
+    }
+    
+    // ================= 关键优化点2：网络状态检测 =================
+    function updateNetworkStatus() {
+      const isOnline = navigator.onLine;
+      networkStatus.textContent = isOnline ? '在线' : '离线';
+      networkStatus.style.background = isOnline ? '#2ecc71' : '#e74c3c';
+      
+      // 离线时禁用上传按钮
+      uploadBtn.disabled = !isOnline || uploadBtn.disabled;
+    }
+    
+    // 监听网络状态变化
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+    updateNetworkStatus(); // 初始状态
+    
+    // 文件选择处理
+    fileInput.addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      // 显示文件信息
+      fileInfo.style.display = 'block';
+      fileName.textContent = file.name;
+      
+      // 获取文件类型
+      const fileExtension = file.name.split('.').pop().toUpperCase();
+      fileType.textContent = fileExtension + ' 文件';
+      
+      // 格式化文件大小
+      const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+      fileSize.textContent = sizeMB + ' MB';
+      
+      // 启用上传按钮
+      uploadBtn.disabled = !navigator.onLine;
+    });
+    
+    // 加载上传历史
+    function loadUploadHistory() {
+      const history = JSON.parse(localStorage.getItem('uploadHistory') || '[]');
+      historyList.innerHTML = '';
+      
+      if (history.length === 0) {
+        historyList.innerHTML = '<p>暂无上传历史</p>';
+        return;
+      }
+      
+      history.forEach(item => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'history-item';
         
-        const result = await response.json();
+        // 获取文件扩展名
+        const fileExtension = item.name.split('.').pop().toLowerCase();
+        const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'].includes(fileExtension);
         
-        if (result.success) {
-          deployStatus.className = 'deploy-status deploy-success';
-          deployStatus.innerHTML = `
-            部署成功！<br>
-            <small>${new Date().toLocaleString()}</small>
-          `;
-        } else {
-          throw new Error(result.message || '部署失败');
-        }
-      } catch (error) {
-        deployStatus.className = 'deploy-status deploy-error';
-        deployStatus.innerHTML = `
-          部署失败: ${error.message}<br>
-          <small>请检查网络连接或稍后重试</small>
+        // 根据文件类型生成不同的历史记录项
+        itemEl.innerHTML = `
+          <div class="file-icon">
+            ${isImage ? 
+              `<img src="${item.path}" alt="${item.name}" width="40">` : 
+              `<svg width="30" height="30" viewBox="0 0 24 24">
+                <path fill="#666" d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+              </svg>`
+            }
+          </div>
+          <div>
+            <p><strong>${item.name}</strong></p>
+            <pre style="margin: 5px 0;">${item.markdown}</pre>
+            <button class="copy-btn" data-code="${item.markdown}">复制代码</button>
+          </div>
         `;
-        console.error('部署错误:', error);
-      }
-    }
-
-    // 改进的上传函数（关键修复2）
-    async function uploadFile(file) {
-      // 生成唯一文件名避免中文问题
-      const filename = `file_${Date.now()}${file.name.substring(file.name.lastIndexOf('.'))}`;
+        
+        historyList.appendChild(itemEl);
+      });
       
-      const formData = new FormData();
-      formData.append('file', file, filename);
-
-      // 使用fetch API替代XHR（更好的错误处理）
-      try {
-        const response = await fetch(getApiUrl(), {
-          method: 'POST',
-          body: formData,
-          signal: AbortSignal.timeout(60000) // 60秒超时
+      // 添加历史项的复制功能
+      document.querySelectorAll('.history-item .copy-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const code = btn.getAttribute('data-code');
+          navigator.clipboard.writeText(code);
+          btn.textContent = '已复制!';
+          setTimeout(() => {
+            btn.textContent = '复制代码';
+          }, 2000);
         });
-
-        if (!response.ok) {
-          const error = await response.text();
-          throw new Error(error || '上传失败');
-        }
-
-        return await response.json();
-      } catch (error) {
-        // 处理网络错误
-        if (error.name === 'AbortError') {
-          throw new Error('上传超时，请重试');
-        }
-        throw error;
-      }
+      });
     }
-
-    // 自动部署触发（关键修复3）
-    function checkAutoDeploy() {
-      // 只有管理员在本地访问时显示部署按钮
-      if (window.location.hostname === 'localhost' && confirm('是否同步部署到GitHub？')) {
-        deployToGit();
+    
+    // ================= 关键优化点3：改进的上传函数 =================
+    uploadBtn.addEventListener('click', async () => {
+      if (!fileInput.files.length) {
+        alert('请选择要上传的文件');
+        return;
       }
-    }
-
-    // 初始化时检查
-    checkAutoDeploy();
-
-    // 文件上传成功后的处理（新增部署触发）
-    function handleUploadSuccess(file, result) {
-      // 原有处理逻辑...
       
-      // 上传成功后触发部署
-      if (result.autoDeploy) {
-        setTimeout(deployToGit, 1000);
-      }
-    }
+      const file = fileInput.files[0];
+      
+      // 验证文件类型
+      const allowedTypes = [
+        // 文档类型
+        'application/msword', // .doc
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+        'application/vnd.ms-excel', // .xls
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/pdf', // .pdf
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
 
-    // 其他原有代码保持不变...
+        // 图片类型
+        'image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp', 'image/webp'
+      ];
+
+      // 添加文件扩展名检查
+      const allowedExtensions = ['.doc', '.docx', '.xls', '.xlsx', '.pdf', '.ppt', '.pptx', 
+                                '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
+      const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
+      if (
+        !allowedTypes.includes(file.type) && 
+        !allowedExtensions.includes(fileExtension)
+      ) {
+        alert('不支持的文件类型。请上传以下格式：\nDOC, DOCX, XLS, XLSX, PDF, PNG, JPG, JPEG, GIF, BMP, WEBP');
+        return;
+      }
+      
+      // 验证文件大小 (50MB)
+      const maxSize = 50 * 1024 * 1024;
+      if (file.size > maxSize) {
+        alert(`文件大小不能超过 ${(maxSize / 1024 / 1024).toFixed(0)}MB`);
+        return;
+      }
+      
+      try {
+        uploadBtn.textContent = '上传中...';
+        uploadBtn.disabled = true;
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.textContent = '0%';
+        
+        // 生成唯一文件名避免中文问题
+        const safeFileName = `file_${Date.now()}${file.name.substring(file.name.lastIndexOf('.'))}`;
+        
+        const formData = new FormData();
+        formData.append('file', file, safeFileName);
+
+        // 使用XMLHttpRequest以支持进度跟踪
+        const xhr = new XMLHttpRequest();
+        const apiUrl = getApiUrl();
+        
+        xhr.open('POST', apiUrl);
+        xhr.timeout = 60000; // 60秒超时
+        
+        // 强制设置请求头（某些移动浏览器需要）
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        
+        // ================= 关键优化点4：改进的进度处理 =================
+        let lastUpdate = 0;
+        xhr.upload.onprogress = function(e) {
+          if (e.lengthComputable) {
+            const now = Date.now();
+            // 节流更新（移动端性能优化）
+            if (now - lastUpdate > 100 || e.loaded === e.total) {
+              const percent = Math.round((e.loaded / e.total) * 100);
+              progressBar.style.width = `${percent}%`;
+              progressText.textContent = `${percent}%`;
+              lastUpdate = now;
+              
+              // 强制渲染更新（解决移动端卡顿）
+              progressBar.style.transform = 'translateZ(0)';
+            }
+          }
+        };
+
+        xhr.onload = function() {
+          if (xhr.status === 0) {
+            // 处理移动端网络中断情况
+            handleUploadError('网络连接已中断');
+            return;
+          }
+          
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              if (result.success) {
+                handleUploadSuccess(file, result);
+              } else {
+                handleUploadError(result.error || '上传失败');
+              }
+            } catch (e) {
+              handleUploadError('解析响应数据失败');
+            }
+          } else {
+            handleUploadError(`上传失败: ${xhr.statusText || '未知错误'}`);
+          }
+        };
+
+        xhr.onerror = function() {
+          handleUploadError(navigator.onLine ? '服务器连接失败' : '网络不可用');
+        };
+
+        xhr.ontimeout = function() {
+          handleUploadError('请求超时，请重试');
+        };
+
+        xhr.send(formData);
+        
+      } catch (error) {
+        handleUploadError(`错误: ${error.message}`);
+      }
+    });
+    
+    // ================= 关键优化点5：统一错误处理 =================
+    function handleUploadError(message) {
+      console.error('上传错误:', message);
+      alert(message);
+      
+      // 重置UI
+      progressContainer.style.display = 'none';
+      uploadBtn.textContent = '上传文件';
+      uploadBtn.disabled = false;
+      
+      // 保留已选文件（移动端用户体验优化）
+      fileInfo.style.display = 'block';
+    }
+    
+    // 处理上传成功
+    function handleUploadSuccess(file, result) {
+      if (result && result.success === true) {
+        // 根据文件类型生成Markdown代码
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'].includes(fileExtension);
+        const mdCode = isImage ? 
+          `![${file.name.replace(/\.[^/.]+$/, '')}](${result.path})` : 
+          `[${file.name}](${result.path})`;
+        
+        mdCodePre.textContent = mdCode;
+        resultDiv.style.display = 'block';
+        
+        // 复制功能
+        copyBtn.onclick = () => {
+          navigator.clipboard.writeText(mdCode).then(() => {
+            copyBtn.textContent = '已复制!';
+            setTimeout(() => {
+              copyBtn.textContent = '复制代码';
+            }, 2000);
+          });
+        };
+        
+        // 保存到历史记录
+        const history = JSON.parse(localStorage.getItem('uploadHistory') || '[]');
+        history.unshift({
+          name: file.name,
+          path: result.path,
+          markdown: mdCode,
+          date: new Date().toISOString()
+        });
+        
+        // 只保留最近10条
+        localStorage.setItem('uploadHistory', JSON.stringify(history.slice(0, 10)));
+        loadUploadHistory();
+      } else {
+        handleUploadError(result.error || '上传失败');
+      }
+      
+      // 重置UI状态
+      progressContainer.style.display = 'none';
+      uploadBtn.textContent = '上传文件';
+      uploadBtn.disabled = false;
+      fileInput.value = ''; // 重置文件输入
+      fileInfo.style.display = 'none'; // 隐藏文件信息
+    }
+    
+    // 初始加载历史记录
+    loadUploadHistory();
   });
   </script>
 </body>
