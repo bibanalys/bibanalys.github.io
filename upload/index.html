@@ -4,7 +4,7 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="keywords" content="文件上传界面, 生信实验室">
+    <meta name="keywords" content="文件上传, 生信实验室">
     <meta name="description" content="生信实验室">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -17,7 +17,7 @@
     <!-- Global site tag (gtag.js) - Google Analytics -->
 
 
-    <title>文件上传界面 | 生信实验室</title>
+    <title>文件上传 | 生信实验室</title>
     <link rel="icon" type="image/png" href="/favicon.png">
     
 
@@ -337,7 +337,7 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="keywords" content="文件上传界面, 生信实验室">
+    <meta name="keywords" content="文件上传, 生信实验室">
     <meta name="description" content="生信实验室">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -350,7 +350,7 @@
     <!-- Global site tag (gtag.js) - Google Analytics -->
 
 
-    <title>文件上传界面 | 生信实验室</title>
+    <title>文件上传 | 生信实验室</title>
     <link rel="icon" type="image/png" href="/favicon.png">
     
 
@@ -812,7 +812,7 @@
           id="file-input" 
           class="file-input" 
           style="display:none" 
-          accept=".doc,.docx,.xls,.xlsx,.pdf,.png,.jpg,.jpeg"
+          accept=".doc,.docx,.xls,.xlsx,.pdf,.png,.jpg,.jpeg,.gif,.bmp,.webp"
         >
   
         <!-- 文件信息显示 -->
@@ -1028,7 +1028,7 @@
         
         // 获取文件扩展名
         const fileExtension = item.name.split('.').pop().toLowerCase();
-        const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp'].includes(fileExtension);
+        const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'].includes(fileExtension);
         
         // 根据文件类型生成不同的历史记录项
         itemEl.innerHTML = `
@@ -1116,29 +1116,72 @@
 
         // 使用XMLHttpRequest以支持进度跟踪
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', 'http://localhost:3000/upload');
+        
+        // 检测是否为本地开发环境
+        const isLocalhost = window.location.hostname === 'localhost' || 
+                            window.location.hostname === '127.0.0.1' ||
+                            window.location.hostname === '';
+                            
+        // 根据环境设置不同的URL
+        const uploadUrl = isLocalhost ? 
+                          'http://localhost:3000/upload' : 
+                          '/upload'; // 使用相对路径，避免跨域问题
+        
+        xhr.open('POST', uploadUrl);
+        
+        // 设置跨域请求头
+        xhr.withCredentials = true;
         
         // 上传进度跟踪
-        xhr.upload.addEventListener('progress', (event) => {
+        xhr.upload.onprogress = function(event) {
           if (event.lengthComputable) {
             const percent = Math.round((event.loaded / event.total) * 100);
             progressBar.style.width = `${percent}%`;
             progressText.textContent = `${percent}%`;
           }
-        });
+        };
+        
+        // 移动端兼容性处理
+        let timeoutId;
+        const checkProgress = () => {
+          if (progressBar.style.width === '0%') {
+            // 进度未更新，可能是移动端问题
+            progressText.textContent = '处理中...';
+          }
+          timeoutId = setTimeout(checkProgress, 5000);
+        };
+        
+        // 启动进度检查
+        checkProgress();
         
         xhr.onload = function() {
+          clearTimeout(timeoutId); // 清除进度检查定时器
+          
           if (xhr.status >= 200 && xhr.status < 300) {
-            const result = JSON.parse(xhr.responseText);
-            handleUploadSuccess(file, result);
+            try {
+              const result = JSON.parse(xhr.responseText);
+              handleUploadSuccess(file, result);
+            } catch (parseError) {
+              console.error('解析响应失败:', parseError);
+              throw new Error('服务器响应格式错误');
+            }
           } else {
             throw new Error(`上传失败: ${xhr.statusText}`);
           }
         };
         
         xhr.onerror = function() {
+          clearTimeout(timeoutId); // 清除进度检查定时器
           throw new Error('网络错误，请检查连接');
         };
+        
+        xhr.ontimeout = function() {
+          clearTimeout(timeoutId); // 清除进度检查定时器
+          throw new Error('上传超时，请重试');
+        };
+        
+        // 设置超时时间
+        xhr.timeout = 60000; // 60秒
         
         xhr.send(formData);
         
@@ -1184,7 +1227,7 @@
         });
         
         // 只保留最近10条
-        localStorage.setItem('uploadHistory', JSON.stringify(history.slice(0, 1)));
+        localStorage.setItem('uploadHistory', JSON.stringify(history.slice(0, 10)));
         loadUploadHistory();
       } else {
         throw new Error(result.error || '上传失败');
