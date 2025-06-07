@@ -1042,33 +1042,34 @@
         return;
       }
       
-      history.forEach(item => {
-        const itemEl = document.createElement('div');
-        itemEl.className = 'history-item';
-        
-        // 获取文件扩展名
-        const fileExtension = item.name.split('.').pop().toLowerCase();
-        const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp'].includes(fileExtension);
-        
-        // 根据文件类型生成不同的历史记录项
-        itemEl.innerHTML = `
-          <div class="file-icon">
-            ${isImage ? 
-              `<img src="${item.path}" alt="${item.name}" width="40">` : 
-              `<svg width="30" height="30" viewBox="0 0 24 24">
-                <path fill="#666" d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-              </svg>`
-            }
-          </div>
-          <div>
-            <p><strong>${item.name}</strong></p>
-            <pre style="margin: 5px 0;">${item.markdown}</pre>
-            <button class="copy-btn" data-code="${item.markdown}">复制代码</button>
-          </div>
-        `;
-        
-        historyList.appendChild(itemEl);
-      });
+      // 只保留最近1条记录
+      const item = history[0];
+      
+      const itemEl = document.createElement('div');
+      itemEl.className = 'history-item';
+      
+      // 获取文件扩展名
+      const fileExtension = item.name.split('.').pop().toLowerCase();
+      const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp'].includes(fileExtension);
+      
+      // 根据文件类型生成不同的历史记录项
+      itemEl.innerHTML = `
+        <div class="file-icon">
+          ${isImage ? 
+            `<img src="${item.path}" alt="${item.name}" width="40">` : 
+            `<svg width="30" height="30" viewBox="0 0 24 24">
+              <path fill="#666" d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+            </svg>`
+          }
+        </div>
+        <div>
+          <p><strong>${item.name}</strong></p>
+          <pre style="margin: 5px 0;">${item.markdown}</pre>
+          <button class="copy-btn" data-code="${item.markdown}">复制代码</button>
+        </div>
+      `;
+      
+      historyList.appendChild(itemEl);
       
       // 添加历史项的复制功能
       document.querySelectorAll('.history-item .copy-btn').forEach(btn => {
@@ -1134,28 +1135,47 @@
         const formData = new FormData();
         formData.append('file', file);
 
-        // 使用Fetch API替代XMLHttpRequest，兼容性更好
-        const response = await fetch('http://localhost:3000/upload', {
-          method: 'POST',
-          body: formData,
-          // 添加headers确保移动端正确处理
-          headers: {
-            'Accept': 'application/json'
+        // 使用XMLHttpRequest以支持进度跟踪
+        const xhr = new XMLHttpRequest();
+        // 修复移动端路径问题 - 使用相对路径
+        xhr.open('POST', '/upload');
+        
+        // 上传进度跟踪
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            progressBar.style.width = `${percent}%`;
+            progressText.textContent = `${percent}%`;
+          } else {
+            // 当无法计算进度时，显示"正在上传"提示
+            progressText.textContent = '正在上传...';
           }
         });
-
-        // 处理响应
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `上传失败: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        handleUploadSuccess(file, result);
+        
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const result = JSON.parse(xhr.responseText);
+            handleUploadSuccess(file, result);
+          } else {
+            throw new Error(`上传失败: ${xhr.statusText}`);
+          }
+        };
+        
+        xhr.onerror = function() {
+          throw new Error('网络错误，请检查连接');
+        };
+        
+        // 添加超时处理
+        xhr.timeout = 30000; // 30秒超时
+        xhr.ontimeout = function() {
+          throw new Error('上传超时，请重试');
+        };
+        
+        xhr.send(formData);
         
       } catch (error) {
         console.error('上传错误:', error);
-        alert(`上传失败: ${error.message}`);
+        alert(`错误: ${error.message}`);
         progressContainer.style.display = 'none';
         uploadBtn.textContent = '上传文件';
         uploadBtn.disabled = false;
@@ -1185,17 +1205,14 @@
           });
         };
         
-        // 保存到历史记录
-        const history = JSON.parse(localStorage.getItem('uploadHistory') || '[]');
-        history.unshift({
+        // 保存到历史记录 - 只保留一条记录
+        localStorage.setItem('uploadHistory', JSON.stringify([{
           name: file.name,
           path: result.path,
           markdown: mdCode,
           date: new Date().toISOString()
-        });
+        }]));
         
-        // 只保留最近10条
-        localStorage.setItem('uploadHistory', JSON.stringify(history.slice(0, 10)));
         loadUploadHistory();
       } else {
         throw new Error(result.error || '上传失败');
