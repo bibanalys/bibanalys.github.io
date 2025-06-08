@@ -396,7 +396,6 @@
 </head>
 
   <style>
-    /* 样式优化 */
     .upload-container {
       max-width: 800px;
       margin: 40px auto;
@@ -415,20 +414,8 @@
       margin-bottom: 30px;
     }
     
-    .file-input-label {
-      display: block;
-      padding: 25px;
-      border: 2px dashed #3498db;
-      border-radius: 8px;
-      text-align: center;
-      cursor: pointer;
-      margin-bottom: 15px;
-      transition: all 0.3s;
-    }
-    
-    .file-input-label:hover {
-      background-color: #f8f9fa;
-      border-color: #2980b9;
+    .file-input {
+      margin-bottom: 20px;
     }
     
     .upload-btn {
@@ -460,7 +447,6 @@
       background: #f8f9fa;
       border-radius: 8px;
       border: 1px solid #eee;
-      margin-top: 20px;
     }
     
     .copy-btn {
@@ -471,11 +457,6 @@
       border-radius: 4px;
       cursor: pointer;
       margin-top: 15px;
-      transition: background 0.3s;
-    }
-    
-    .copy-btn:hover {
-      background: #27ae60;
     }
     
     .progress-container {
@@ -485,12 +466,11 @@
       border-radius: 4px;
       margin: 15px 0;
       position: relative;
-      height: 20px;
     }
     
     .progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, #3498db, #2ecc71);
+      height: 20px;
+      background: #3498db;
       border-radius: 4px;
       width: 0%;
       transition: width 0.3s;
@@ -505,79 +485,33 @@
       line-height: 20px;
       color: white;
       font-size: 12px;
-      font-weight: bold;
     }
     
     .file-info-card {
-      padding: 15px;
+      padding: 10px;
       background: #f8f9fa;
       border-radius: 5px;
-      margin: 15px 0;
+      margin: 10px 0;
       font-size: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .file-info-content {
-      flex: 1;
-    }
-    
-    .file-remove {
-      color: #e74c3c;
-      cursor: pointer;
-      font-size: 20px;
     }
     
     .history-item {
       display: flex;
       margin-bottom: 15px;
-      padding: 15px;
+      padding: 10px;
       background: #f8f9fa;
       border-radius: 5px;
-      align-items: center;
     }
     
     .file-icon {
-      width: 50px;
-      height: 50px;
+      width: 60px;
+      height: 60px;
       display: flex;
       align-items: center;
       justify-content: center;
       margin-right: 15px;
       background: #e0e0e0;
       border-radius: 5px;
-      flex-shrink: 0;
-    }
-    
-    .history-content {
-      flex: 1;
-      min-width: 0;
-    }
-    
-    .history-file-name {
-      font-weight: bold;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 5px;
-    }
-    
-    .history-md-code {
-      font-family: monospace;
-      background: #eee;
-      padding: 5px;
-      border-radius: 3px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    
-    .no-history {
-      text-align: center;
-      padding: 20px;
-      color: #7f8c8d;
-      font-style: italic;
     }
   </style>
 </head>
@@ -865,11 +799,18 @@
       </div>
       
       <div class="upload-form">
-        <!-- 文件选择区域 -->
-        <label for="file-input" class="file-input-label">
+        <!-- 改进的文件选择区域 -->
+        <label for="file-input" class="file-input-label" style="
+          display: block;
+          padding: 15px;
+          border: 2px dashed #3498db;
+          border-radius: 8px;
+          text-align: center;
+          cursor: pointer;
+          margin-bottom: 15px;
+        ">
           <strong>点击选择文件</strong>
           <p style="font-size: 14px; color: #666; margin-top: 10px;">
-            或拖放文件到此处<br>
             支持格式: DOC, DOCX, XLS, XLSX, PDF, PNG, JPG, JPEG
           </p>
         </label>
@@ -884,12 +825,9 @@
   
         <!-- 文件信息显示 -->
         <div id="file-info" class="file-info-card" style="display:none">
-          <div class="file-info-content">
-            <div><strong>文件名:</strong> <span id="file-name"></span></div>
-            <div><strong>文件类型:</strong> <span id="file-type"></span></div>
-            <div><strong>文件大小:</strong> <span id="file-size"></span></div>
-          </div>
-          <div class="file-remove" id="remove-file">×</div>
+          <div><strong>文件名:</strong> <span id="file-name"></span></div>
+          <div><strong>文件类型:</strong> <span id="file-type"></span></div>
+          <div><strong>文件大小:</strong> <span id="file-size"></span></div>
         </div>
         
         <!-- 上传进度条 -->
@@ -908,8 +846,8 @@
       </div>
       
       <div id="upload-history" class="upload-history">
-        <h3>最近上传记录</h3>
-        <div id="history-container"></div>
+        <h3>最近上传</h3>
+        <div id="history-list"></div>
       </div>
     </div>
   </main>
@@ -1048,58 +986,26 @@
   <script>
   document.addEventListener('DOMContentLoaded', function() {
     const fileInput = document.getElementById('file-input');
-    const fileInputLabel = document.querySelector('.file-input-label');
     const uploadBtn = document.getElementById('upload-btn');
     const resultDiv = document.getElementById('upload-result');
     const mdCodePre = document.getElementById('md-code');
     const copyBtn = document.getElementById('copy-btn');
-    const historyContainer = document.getElementById('history-container');
+    const historyList = document.getElementById('history-list');
     const fileInfo = document.getElementById('file-info');
     const fileName = document.getElementById('file-name');
     const fileType = document.getElementById('file-type');
     const fileSize = document.getElementById('file-size');
-    const removeFileBtn = document.getElementById('remove-file');
     const progressContainer = document.getElementById('progress-container');
     const progressBar = document.getElementById('progress-bar');
     const progressText = document.getElementById('progress-text');
     
-    // 拖放功能支持
-    fileInputLabel.addEventListener('dragover', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.style.borderColor = '#2ecc71';
-      this.style.backgroundColor = '#f8f9fa';
-    });
-    
-    fileInputLabel.addEventListener('dragleave', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.style.borderColor = '#3498db';
-      this.style.backgroundColor = '';
-    });
-    
-    fileInputLabel.addEventListener('drop', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.style.borderColor = '#3498db';
-      this.style.backgroundColor = '';
-      
-      const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        fileInput.files = files;
-        handleFileSelected(files[0]);
-      }
-    });
-    
     // 文件选择处理
     fileInput.addEventListener('change', function(event) {
       const file = event.target.files[0];
-      if (file) handleFileSelected(file);
-    });
-    
-    function handleFileSelected(file) {
+      if (!file) return;
+      
       // 显示文件信息
-      fileInfo.style.display = 'flex';
+      fileInfo.style.display = 'block';
       fileName.textContent = file.name;
       
       // 获取文件类型
@@ -1112,61 +1018,56 @@
       
       // 启用上传按钮
       uploadBtn.disabled = false;
-    }
-    
-    // 移除文件
-    removeFileBtn.addEventListener('click', function() {
-      fileInput.value = '';
-      fileInfo.style.display = 'none';
-      uploadBtn.disabled = true;
     });
     
-    // 加载上传历史（仅显示最新一条）
-    function loadLatestHistory() {
+    // 加载上传历史
+    function loadUploadHistory() {
       const history = JSON.parse(localStorage.getItem('uploadHistory') || '[]');
-      historyContainer.innerHTML = '';
+      historyList.innerHTML = '';
       
       if (history.length === 0) {
-        historyContainer.innerHTML = '<div class="no-history">暂无上传记录</div>';
+        historyList.innerHTML = '<p>暂无上传历史</p>';
         return;
       }
       
-      // 只显示最新的一条记录
-      const latestItem = history[0];
-      const itemEl = document.createElement('div');
-      itemEl.className = 'history-item';
-      
-      // 获取文件扩展名
-      const fileExtension = latestItem.name.split('.').pop().toLowerCase();
-      const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp'].includes(fileExtension);
-      
-      itemEl.innerHTML = `
-        <div class="file-icon">
-          ${isImage ? 
-            `<img src="${latestItem.path}" alt="${latestItem.name}" width="40">` : 
-            `<svg width="30" height="30" viewBox="0 0 24 24">
-              <path fill="#666" d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-            </svg>`
-          }
-        </div>
-        <div class="history-content">
-          <div class="history-file-name" title="${latestItem.name}">${latestItem.name}</div>
-          <div class="history-md-code" title="${latestItem.markdown}">${latestItem.markdown}</div>
-        </div>
-        <button class="copy-btn" data-code="${latestItem.markdown}">复制</button>
-      `;
-      
-      historyContainer.appendChild(itemEl);
+      history.forEach(item => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'history-item';
+        
+        // 获取文件扩展名
+        const fileExtension = item.name.split('.').pop().toLowerCase();
+        const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp'].includes(fileExtension);
+        
+        // 根据文件类型生成不同的历史记录项
+        itemEl.innerHTML = `
+          <div class="file-icon">
+            ${isImage ? 
+              `<img src="${item.path}" alt="${item.name}" width="40">` : 
+              `<svg width="30" height="30" viewBox="0 0 24 24">
+                <path fill="#666" d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+              </svg>`
+            }
+          </div>
+          <div>
+            <p><strong>${item.name}</strong></p>
+            <pre style="margin: 5px 0;">${item.markdown}</pre>
+            <button class="copy-btn" data-code="${item.markdown}">复制代码</button>
+          </div>
+        `;
+        
+        historyList.appendChild(itemEl);
+      });
       
       // 添加历史项的复制功能
-      const historyCopyBtn = itemEl.querySelector('.copy-btn');
-      historyCopyBtn.addEventListener('click', function() {
-        const code = this.getAttribute('data-code');
-        navigator.clipboard.writeText(code);
-        this.textContent = '已复制!';
-        setTimeout(() => {
-          this.textContent = '复制';
-        }, 2000);
+      document.querySelectorAll('.history-item .copy-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const code = btn.getAttribute('data-code');
+          navigator.clipboard.writeText(code);
+          btn.textContent = '已复制!';
+          setTimeout(() => {
+            btn.textContent = '复制代码';
+          }, 2000);
+        });
       });
     }
     
@@ -1181,15 +1082,21 @@
       
       // 验证文件类型
       const allowedTypes = [
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/pdf',
+        // 文档类型
+        'application/msword', // .doc
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+        'application/vnd.ms-excel', // .xls
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/pdf', // .pdf
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+
+        // 图片类型
         'image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp', 'image/webp'
       ];
 
-      const allowedExtensions = ['.doc', '.docx', '.xls', '.xlsx', '.pdf', '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
+      // 添加文件扩展名检查
+      const allowedExtensions = ['.doc', '.docx', '.xls', '.xlsx', '.pdf', '.ppt', '.pptx', 
+                                '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
       const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
 
       if (
@@ -1215,10 +1122,10 @@
         const formData = new FormData();
         formData.append('file', file);
 
-        // 使用XMLHttpRequest上传
+        // 使用XMLHttpRequest以支持进度跟踪
         const xhr = new XMLHttpRequest();
+        // xhr.open('POST', 'http://localhost:3000/upload');
         xhr.open('POST', 'https://www.bioanalysis.top/upload');
-        
         // 上传进度跟踪
         xhr.upload.addEventListener('progress', (event) => {
           if (event.lengthComputable) {
@@ -1275,16 +1182,18 @@
           });
         };
         
-        // 保存到历史记录（只保留最新一条）
-        const historyItem = {
+        // 保存到历史记录
+        const history = JSON.parse(localStorage.getItem('uploadHistory') || '[]');
+        history.unshift({
           name: file.name,
           path: result.path,
           markdown: mdCode,
           date: new Date().toISOString()
-        };
+        });
         
-        localStorage.setItem('uploadHistory', JSON.stringify([historyItem]));
-        loadLatestHistory();
+        // 只保留最近10条
+        localStorage.setItem('uploadHistory', JSON.stringify(history.slice(0, 10)));
+        loadUploadHistory();
       } else {
         throw new Error(result.error || '上传失败');
       }
@@ -1293,12 +1202,12 @@
       progressContainer.style.display = 'none';
       uploadBtn.textContent = '上传文件';
       uploadBtn.disabled = false;
-      fileInput.value = '';
-      fileInfo.style.display = 'none';
+      fileInput.value = ''; // 重置文件输入
+      fileInfo.style.display = 'none'; // 隐藏文件信息
     }
     
     // 初始加载历史记录
-    loadLatestHistory();
+    loadUploadHistory();
   });
   </script>
 </body>
