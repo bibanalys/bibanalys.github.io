@@ -1124,8 +1124,8 @@
 
         // 使用XMLHttpRequest以支持进度跟踪
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', 'http://localhost:3000/upload');
-        
+        // xhr.open('POST', 'http://localhost:3000/upload');
+        xhr.open('POST', 'https://uploadhexo-api.vercel.app/upload');
         // 上传进度跟踪
         xhr.upload.addEventListener('progress', (event) => {
           if (event.lengthComputable) {
